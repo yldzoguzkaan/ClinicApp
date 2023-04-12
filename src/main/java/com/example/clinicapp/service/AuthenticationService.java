@@ -53,6 +53,11 @@ public class AuthenticationService {
         revokeAllUserTokens((User) user); //aut olan userların logunu tutmus oldu.
         saveUserToken((User) user, jwtToken); //var olan token i geri döndürebiliriz.
         return AuthenticationResponse.builder()
+                .uid(((User) user).getUid())
+                .nameSurname(((User) user).getNameSurname())
+                .username(user.getUsername())
+                .role(((User) user).getRole())
+                .permissions(((User) user).getPermissions())
                 .token(jwtToken)
                 .build();
     }
