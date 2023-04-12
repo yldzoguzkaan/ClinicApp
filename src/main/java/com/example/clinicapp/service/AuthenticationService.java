@@ -20,6 +20,7 @@ import java.util.Date;
 public class AuthenticationService {
     private final UserService userService;
     private final TokenRepository tokenRepository;
+
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
@@ -57,7 +58,14 @@ public class AuthenticationService {
     }
 
     private void saveUserToken(User user, String jwtToken) {
-        var token = Token.builder()
+        Token token = new Token();
+        token.setUser(user);
+        token.setToken(jwtToken);
+        token.setTokenType(TokenType.BEARER);
+        token.setIsActive(true);
+        token.setIsDelete(false);
+
+        /*var token = Token.builder()
                 .user(user)
                 .token(jwtToken)
                 .tokenType(TokenType.BEARER)
@@ -65,7 +73,7 @@ public class AuthenticationService {
                 .revoked(false)
                 .createDate(new Date())
                 .updateDate(new Date())
-                .build();
+                .build();*/
         tokenRepository.save(token);
     }
 
@@ -75,9 +83,8 @@ public class AuthenticationService {
             return;
         }
         validUserTokens.forEach(token -> {
-            token.setExpired(true);
-            token.setRevoked(true);
-            token.setUpdateDate(new Date());
+            token.setIsActive(false);
+            token.setIsDelete(true);
         });
         tokenRepository.saveAll(validUserTokens);
     }
