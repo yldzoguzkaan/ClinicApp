@@ -4,6 +4,7 @@ import com.example.clinicapp.dto.constant.ParameterDTO;
 import com.example.clinicapp.enums.ParameterType;
 import com.example.clinicapp.service.ParameterService;
 import lombok.RequiredArgsConstructor;
+import org.modelmapper.ModelMapper;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,7 +16,6 @@ import java.util.List;
 public class ParameterController {
 
     private final ParameterService parameterService;
-
 
     /*@GetMapping("/getByType/{type}")
     public List<ParameterDTO> getParameters(@PathVariable ParameterType type) {

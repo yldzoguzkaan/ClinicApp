@@ -15,10 +15,12 @@ import java.util.List;
 @NoArgsConstructor
 public class AuthenticationResponse {
 
+    private String token;
+    private Long id;
     private String uid;
     private String nameSurname;
     private String username;
     private Role role;
     private List<Permission> permissions;
-    private String token;
+
 }

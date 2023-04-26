@@ -13,7 +13,7 @@ import lombok.NoArgsConstructor;
 public class ParameterDTO {
 
     private Long id;
-    private ParameterType type;
+    private ParameterType parameterType;
     private String label;
     private String description;
 

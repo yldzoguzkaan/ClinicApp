@@ -13,6 +13,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.Calendar;
 import java.util.Date;
 
 @Service
@@ -41,6 +42,11 @@ public class AuthenticationService {
                 .build();
     }*/
 
+
+    /** Kullanıcı sistemden hiç token almadıysa token üretilir gönderilir. Eğer mevcutta token varsa;
+     ** Token üretildiği zamandan 2 saat geçmişse o token öldürülür ve yenisi üretilir.
+     ** Aksi durumda mevcut token döndürülür. Mevcut tokenin geçerliliğine 2 saat daha eklenir.
+    **/
     public AuthenticationResponse authenticate(AuthenticationRequest request) throws Exception{
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
@@ -48,49 +54,60 @@ public class AuthenticationService {
                         request.getPassword()
                 )
         );
-        var user = userService.loadUserByUsername(request.getUsername());
+        User user = (User) userService.loadUserByUsername(request.getUsername());
+        Token token = tokenRepository.findByUserIdAndIsActiveTrueAndIsDeleteFalse(user.getId()).orElse(null);
         var jwtToken = jwtService.generateToken(user);
-        revokeAllUserTokens((User) user); //aut olan userların logunu tutmus oldu.
-        saveUserToken((User) user, jwtToken); //var olan token i geri döndürebiliriz.
+        if (token == null)
+        {
+            token = saveUserToken(user,jwtToken);
+        }
+        else
+        {
+            Calendar calendar = Calendar.getInstance();
+            calendar.setTime(token.getUpdateDate());
+            calendar.add(Calendar.HOUR_OF_DAY, 2);
+            Date newDate = calendar.getTime();
+            if(new Date().after(newDate))
+            {
+                revokeUserToken(token);
+                token = saveUserToken(user,jwtToken);
+            }
+            else
+            {
+                updateUserToken(token);
+            }
+        }
         return AuthenticationResponse.builder()
-                .uid(((User) user).getUid())
-                .nameSurname(((User) user).getNameSurname())
+                .uid(user.getUid())
+                .nameSurname(user.getNameSurname())
                 .username(user.getUsername())
-                .role(((User) user).getRole())
-                .permissions(((User) user).getPermissions())
-                .token(jwtToken)
+                .role(user.getRole())
+                .permissions(user.getPermissions())
+                .token(token.getToken())
                 .build();
+
     }
 
-    private void saveUserToken(User user, String jwtToken) {
+    private Token saveUserToken(User user, String jwtToken) {
         Token token = new Token();
         token.setUser(user);
         token.setToken(jwtToken);
         token.setTokenType(TokenType.BEARER);
         token.setIsActive(true);
         token.setIsDelete(false);
+        return tokenRepository.save(token);
+    }
 
-        /*var token = Token.builder()
-                .user(user)
-                .token(jwtToken)
-                .tokenType(TokenType.BEARER)
-                .expired(false)
-                .revoked(false)
-                .createDate(new Date())
-                .updateDate(new Date())
-                .build();*/
+    private void updateUserToken(Token token){
+        token.setUpdateDate(new Date());
         tokenRepository.save(token);
     }
 
-    private void revokeAllUserTokens(User user) {
-        var validUserTokens = tokenRepository.findAllValidTokenByUser(user.getId());
-        if (validUserTokens.isEmpty()){
-            return;
-        }
-        validUserTokens.forEach(token -> {
-            token.setIsActive(false);
-            token.setIsDelete(true);
-        });
-        tokenRepository.saveAll(validUserTokens);
+    private void revokeUserToken(Token token){
+        token.setUpdateDate(new Date());
+        token.setIsActive(false);
+        token.setIsDelete(true);
+        tokenRepository.save(token);
     }
+
 }
